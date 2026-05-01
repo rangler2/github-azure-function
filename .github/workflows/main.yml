@@ -1,0 +1,114 @@
+name: Deploy Azure Function
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'infrastructure/**'
+      - 'GithubAzureFunction/**'
+      - '.github/workflows/**'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AZURE_FUNCTIONAPP_PACKAGE_PATH: './GithubAzureFunction'
+  DOTNET_VERSION: '8.0.x'
+
+jobs:
+  deploy-infrastructure:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: 'Debug environment'
+      run: |
+        echo "Selected environment: ${{ github.event.inputs.environment || 'dev' }}"
+        echo "Using credentials for: ${{ github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_CREDENTIALS || github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_CREDENTIALS || 'DEV' }}"
+        echo "Using resource group: ${{ github.event.inputs.environment == 'prod' && vars.PROD_AZURE_RG || github.event.inputs.environment == 'staging' && vars.STAGING_AZURE_RG || vars.DEV_AZURE_RG }}"
+    - name: 'Login to Azure'
+      uses: azure/login@v1
+      with:
+        creds: >-
+          ${{
+            (github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_CREDENTIALS) ||
+            (github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_CREDENTIALS) ||
+            secrets.DEV_AZURE_CREDENTIALS
+          }}
+
+    - name: 'Set environment-specific secrets'
+      id: set-secrets
+      run: |
+        ENV=${{ github.event.inputs.environment || 'dev' }}
+          echo "resource_group=${{ vars.DEV_AZURE_RG }}" >> $GITHUB_OUTPUT
+          echo "heartcore_project=${{ vars.DEV_HEARTCORE_PROJECT_ALIAS }}" >> $GITHUB_OUTPUT
+          echo "heartcore_key=${{ secrets.DEV_HEARTCORE_API_KEY }}" >> $GITHUB_OUTPUT
+          echo "raygun_api_key=${{ secrets.DEV_RAYGUN_API_KEY }}" >> $GITHUB_OUTPUT
+        
+
+    - name: 'Deploy Bicep template'
+      uses: azure/arm-deploy@v1
+      with:
+        subscriptionId: >-
+          ${{
+            (github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_SUBSCRIPTION_ID) ||
+            (github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_SUBSCRIPTION_ID) ||
+            secrets.DEV_AZURE_SUBSCRIPTION_ID
+          }}
+        resourceGroupName: ${{ steps.set-secrets.outputs.resource_group }}
+        template: ./infrastructure/main.bicep
+        parameters: >
+          environmentName=${{ github.event.inputs.environment || 'dev' }}
+          
+
+  build-and-deploy-function:
+    needs: deploy-infrastructure
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v4
+
+    - name: Setup DotNet ${{ env.DOTNET_VERSION }} Environment
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: 'Build Function App'
+      shell: bash
+      run: |
+        pushd '${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}'
+        dotnet build --configuration Release --output ./output
+        popd
+
+    - name: 'Login to Azure'
+      uses: azure/login@v1
+      with:
+        creds: >-
+          ${{
+            (github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_CREDENTIALS) ||
+            (github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_CREDENTIALS) ||
+            secrets.DEV_AZURE_CREDENTIALS
+          }}
+
+    - name: 'Deploy Function App'
+      uses: Azure/functions-action@v1
+      with:
+        app-name: "func-umbraco-online-${{ github.event.inputs.environment || 'dev' }}"
+        package: "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output"
+
+
