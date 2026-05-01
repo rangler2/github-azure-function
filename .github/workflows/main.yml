@@ -54,9 +54,6 @@ jobs:
       run: |
         ENV=${{ github.event.inputs.environment || 'dev' }}
           echo "resource_group=${{ vars.DEV_AZURE_RG }}" >> $GITHUB_OUTPUT
-          echo "heartcore_project=${{ vars.DEV_HEARTCORE_PROJECT_ALIAS }}" >> $GITHUB_OUTPUT
-          echo "heartcore_key=${{ secrets.DEV_HEARTCORE_API_KEY }}" >> $GITHUB_OUTPUT
-          echo "raygun_api_key=${{ secrets.DEV_RAYGUN_API_KEY }}" >> $GITHUB_OUTPUT
         
 
     - name: 'Deploy Bicep template'
@@ -64,8 +61,6 @@ jobs:
       with:
         subscriptionId: >-
           ${{
-            (github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_SUBSCRIPTION_ID) ||
-            (github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_SUBSCRIPTION_ID) ||
             secrets.DEV_AZURE_SUBSCRIPTION_ID
           }}
         resourceGroupName: ${{ steps.set-secrets.outputs.resource_group }}
