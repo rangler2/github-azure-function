@@ -44,9 +44,7 @@ jobs:
       with:
         creds: >-
           ${{
-            (github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_CREDENTIALS) ||
-            (github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_CREDENTIALS) ||
-            secrets.DEV_AZURE_CREDENTIALS
+            vars.DEV_AZURE_CREDENTIALS
           }}
 
     - name: 'Set environment-specific secrets'
@@ -97,7 +95,7 @@ jobs:
           ${{
             (github.event.inputs.environment == 'prod' && secrets.PROD_AZURE_CREDENTIALS) ||
             (github.event.inputs.environment == 'staging' && secrets.STAGING_AZURE_CREDENTIALS) ||
-            secrets.DEV_AZURE_CREDENTIALS
+            vars.DEV_AZURE_CREDENTIALS
           }}
 
     - name: 'Deploy Function App'
