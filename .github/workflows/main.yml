@@ -101,7 +101,7 @@ jobs:
     - name: 'Deploy Function App'
       uses: Azure/functions-action@v1
       with:
-        app-name: "func-umbraco-online-${{ github.event.inputs.environment || 'dev' }}"
+        app-name: "func-andytest-online-${{ github.event.inputs.environment || 'dev' }}"
         package: "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output"
 
 
