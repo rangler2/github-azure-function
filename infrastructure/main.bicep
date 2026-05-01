@@ -2,7 +2,7 @@
 param environmentName string
 
 @description('The location for all resources')
-param location string = 'uksouth'
+param location string = 'ukwest'
 
 @description('The date and time the resource was created')
 param createdOn string = utcNow('dd/MM/yyyy')
