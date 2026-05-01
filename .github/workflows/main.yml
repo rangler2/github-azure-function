@@ -98,10 +98,20 @@ jobs:
             vars.DEV_AZURE_CREDENTIALS
           }}
 
-    - name: 'Deploy Function App'
-      uses: Azure/functions-action@v1
-      with:
-        app-name: "func-andytest-online-${{ github.event.inputs.environment || 'dev' }}"
-        package: "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output"
+    - name: 'Deploy Function App (Zip Deploy)'
+      run: |
+        cd "${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}/output"
+        zip -r functionapp.zip .
 
+        az functionapp deployment source config-zip \
+          --resource-group ${{ vars.DEV_AZURE_RG }} \
+          --name func-andytest-online-${{ github.event.inputs.environment || 'dev' }} \
+          --src functionapp.zip
+
+    - name: 'Force Run From Local Package'
+      run: |
+        az functionapp config appsettings set \
+          --name func-andytest-online-${{ github.event.inputs.environment || 'dev' }} \
+          --resource-group ${{ vars.DEV_AZURE_RG }} \
+          --settings WEBSITE_RUN_FROM_PACKAGE=1
 
