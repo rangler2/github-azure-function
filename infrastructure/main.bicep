@@ -7,7 +7,7 @@ param location string = 'uksouth'
 @description('The date and time the resource was created')
 param createdOn string = utcNow('dd/MM/yyyy')
 
-var purpose = 'umbraco'
+var purpose = 'andytest'
 var createdBy = 'Github_Azure_Dev_Integration'
 
 var functionAppName = 'func-${purpose}-online-${environmentName}'
@@ -109,7 +109,7 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         }
         {
           name: 'WEBSITE_CONTENTSHARE'
-          value: toLower('func-andytest-${environmentName}')
+          value: toLower('func-andytest-online-${environmentName}')
         }
         {
           name: 'AZURE_FUNCTIONS_ENVIRONMENT'
